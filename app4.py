@@ -53,15 +53,15 @@ button:hover {
 def main():
     # Page config
     st.set_page_config(
-        page_title="Ethical Propensity Score Dashboard",
+        page_title="Ethical Propensity Score Dashboard (Bias-Inverted)",
         layout="wide",
     )
     
     # Inject custom CSS
     st.markdown(custom_css, unsafe_allow_html=True)
     
-    # ----- LOGO SECTION -----
-    # Updated with the direct .jpg link
+    # ----- LOGO SECTION (example) -----
+    # Provide a valid direct image link or local file reference if needed
     logo_url = "https://logowik.com/content/uploads/images/iit-indian-institute-of-technology-kharagpur4613.jpg"
     st.image(logo_url, width=150)
     
@@ -72,7 +72,7 @@ def main():
     # -------------- SIDEBAR --------------
     st.sidebar.title("Navigation & Settings")
     
-    # Developer names + Mentor
+    # Developer names (example)
     with st.sidebar.expander("Developed By"):
         st.write("1. Kunal Kumar")
         st.write("2. Amit Kumar Ray")
@@ -175,21 +175,26 @@ def main():
         if data_transactions == 0: data_transactions = 1
         if total_feedback == 0: total_feedback = 1
         
-        # Calculate metrics
-        bias_index = (bias_complaints / total_decisions) * 100
+        # ----- 1. Calculate Raw Bias & Adjusted Bias -----
+        raw_bias_index = (bias_complaints / total_decisions) * 100
+        # We'll invert it so that "less bias" yields a higher partial score
+        adj_bias_index = 100 - raw_bias_index  
+        
+        # ----- 2. Other Metrics -----
         transparency_score = (explainable_ai / total_decisions) * 100
         accountability_index = (human_reviewed / total_decisions) * 100
         privacy_compliance = ((data_transactions - policy_violations) / data_transactions) * 100
         fairness_index = (diverse_hires / total_hires) * 100
         stakeholder_sentiment = (positive_feedback / total_feedback) * 100
         
-        # Weighted average
+        # ----- 3. Weighted Average for EPS -----
         sum_of_weights = (bias_w + transp_w + acc_w + priv_w + fair_w + sent_w)
         if sum_of_weights == 0:
             sum_of_weights = 1
         
+        # Notice we use "adj_bias_index" in the formula
         eps = (
-            (bias_index * bias_w) +
+            (adj_bias_index * bias_w) +
             (transparency_score * transp_w) +
             (accountability_index * acc_w) +
             (privacy_compliance * priv_w) +
@@ -203,7 +208,8 @@ def main():
         with tab1:
             st.write("### AI Hiring Metrics Overview")
             colA, colB, colC = st.columns(3)
-            colA.metric("Bias Index (%)", f"{bias_index:.2f}")
+            # We still display the *raw* bias for clarity
+            colA.metric("Bias Index (%)", f"{raw_bias_index:.2f}")
             colA.metric("Transparency (%)", f"{transparency_score:.2f}")
             colB.metric("Accountability (%)", f"{accountability_index:.2f}")
             colB.metric("Privacy (%)", f"{privacy_compliance:.2f}")
@@ -232,6 +238,8 @@ def main():
 
         with tab2:
             st.write("### Tailored Recommendations")
+            
+            # Overall EPS-based message
             if eps < 40:
                 st.error("EPS is critically low. Immediate action required to reduce bias and improve oversight.")
             elif eps < 70:
@@ -241,7 +249,8 @@ def main():
             
             st.write("---")
             st.write("#### Metric-Specific Suggestions")
-            if bias_index > 10:
+            # STILL reference raw_bias_index for the threshold
+            if raw_bias_index > 10:
                 st.write("- **High Bias Index:** Investigate training data for skew, re-check feature importance, and consider re-tuning your AI models.")
             if fairness_index < 50:
                 st.write("- **Low Fairness Index:** Partner with diverse job boards and community organizations. Ensure job descriptions attract underrepresented groups.")
@@ -255,7 +264,11 @@ def main():
                 st.write("- **Improving Sentiment:** Collect more feedback from applicants and employees to refine the user experience around AI-driven hiring.")
 
             st.write("---")
-            st.info("**Tip:** Adjust the metric weights in the sidebar to reflect your organization’s priorities or regulatory focus (e.g., emphasis on fairness vs. privacy).")
+            st.info("""
+**Tip:** We've inverted the bias metric so a higher Bias Index 
+now lowers your EPS. Adjust the metric weights in the sidebar to 
+reflect your organization's priorities or regulatory focus.
+            """)
 
 if __name__ == "__main__":
     main()
